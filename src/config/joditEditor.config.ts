@@ -38,7 +38,7 @@ export const MillatConfig = {
   },
 
   imageProcessor: {
-    replaceDataURIToBlobIdInView: true, // ✅ correct type
+    replaceDataURIToBlobIdInView: true, 
   },
 
   style: {
