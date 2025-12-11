@@ -162,23 +162,6 @@ const [designation, setDesignation] = useState(data?.designation || "");
               onChange={setDesignation}
             />
 
-            {/* <TextField
-              name="designation"
-              defaultValue={data?.designation}
-              className="md:w-[350px] w-[250px] bg-white"
-              id="outlined-basic"
-              label="Designation"
-              variant="outlined"
-            /> */}
-            {/* <TextField
-              name="partyname"
-              defaultValue={data?.partyname}
-              className="md:w-[350px] w-[250px] bg-white"
-              id="outlined-basic"
-              label="Party Name"
-              variant="outlined"
-            /> */}
-
             <input
               type="submit"
               value="Update"
