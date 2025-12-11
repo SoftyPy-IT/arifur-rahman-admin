@@ -85,8 +85,8 @@ export type TVoiceOnMedia = {
 export type TBanner = {
   name: string;
   designation: string;
-  image: string;
-  partyname: string;
+  imageUrl: string;
+  // partyname: string;
   updatedAt: string;
 };
 export type TConcernIssues = {

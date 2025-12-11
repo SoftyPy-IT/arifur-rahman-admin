@@ -8,7 +8,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { CiEdit } from "react-icons/ci";
-// import UploadVideoSlider from "./UploadVideoSlider/UploadVideoSlider";
 import Image from "next/image";
 import UploadImageSlider from "./uploadImageSlider/UploadImageSlider";
 import MillatEditor from "./JodiEditor";
@@ -26,9 +25,7 @@ const UpdateBannerInfo = ({
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [photoId, setPhotoId] = useState("");
   const axiosPublic = useAxiosPublic();
-const [designation, setDesignation] = useState(data?.designation || "");
-
-
+  const [designation, setDesignation] = useState(data?.designation || "");
 
   useEffect(() => {
     if (!photoId) return;
@@ -37,7 +34,6 @@ const [designation, setDesignation] = useState(data?.designation || "");
       try {
         const response = await axiosPublic.get(`/photos/${photoId}`);
         setImageUrl(response?.data?.data?.imageUrl);
- 
       } catch (error) {
         console.error("Error fetching photo data:", error);
       }
@@ -46,20 +42,6 @@ const [designation, setDesignation] = useState(data?.designation || "");
     fetchPhotoData();
   }, [photoId, axiosPublic]);
 
-  // useEffect(() => {
-  //   if (!videoId) return;
-
-  //   const fetchVideoData = async () => {
-  //     try {
-  //       const response = await axiosPublic.get(`/videos/${videoId}`);
-  //       setVideoUrl(response?.data?.data?.videoUrl);
-  //     } catch (error) {
-  //       console.error("Error fetching photo data:", error);
-  //     }
-  //   };
-
-  //   fetchVideoData();
-  // }, [videoId, axiosPublic]);
 
   const updateMutation = useMutation({
     mutationFn: async ({
@@ -93,8 +75,7 @@ const [designation, setDesignation] = useState(data?.designation || "");
     const bannerData: Partial<TBanner> = {
       name: form.name.value,
       designation,
-      // partyname: form.partyname.value,
-      image: photoId ? imageUrl : data?.image,
+     imageUrl: photoId ? imageUrl : data?.imageUrl,
     };
 
     updateMutation.mutate({ id: features._id as string, bannerData });
@@ -138,7 +119,7 @@ const [designation, setDesignation] = useState(data?.designation || "");
                   />
                   <Image
                     alt="Event Placeholder"
-                    src={data?.image}
+                    src={data?.imageUrl}
                     height={600}
                     width={800}
                     className="w-[150px] h-[150px] rounded-full"

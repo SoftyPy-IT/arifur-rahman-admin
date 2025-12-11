@@ -115,7 +115,7 @@ const Banner = () => {
                   <TableCell component="th" scope="row">
                     <div className="relative w-[140px] h-[100px]">
                       <Image
-                        src={bannerData?.image}
+                        src={bannerData?.imageUrl}
                         alt="img"
                         width={100}
                         height={100}

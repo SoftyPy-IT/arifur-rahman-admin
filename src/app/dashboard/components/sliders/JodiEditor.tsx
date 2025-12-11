@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Jodit } from "jodit-react"; // class type
+import { Jodit } from "jodit-react";
 import { MillatConfig } from "@/config/joditEditor.config";
 
 const JoditEditor = dynamic(() => import("jodit-react"), { ssr: false });
@@ -19,17 +19,13 @@ const MillatEditor: React.FC<MillatEditorProps> = ({
   value = "",
   onChange,
 }) => {
-  const editorRef = useRef<Jodit | null>(null); // ✅ Correct ref type
+  const editorRef = useRef<Jodit | null>(null);
   const [editorValue, setEditorValue] = useState(value);
 
+  // Update only when parent value changes  
   useEffect(() => {
     setEditorValue(value);
   }, [value]);
-
-  const handleEditorChange = (newContent: string) => {
-    setEditorValue(newContent);
-    onChange(newContent);
-  };
 
   const config = {
     ...MillatConfig,
@@ -42,21 +38,21 @@ const MillatEditor: React.FC<MillatEditorProps> = ({
         }
       },
     },
-    imageProcessor: {
-      replaceDataURIToBlobIdInView: true, // Type-safe
-    },
   };
 
   return (
-    <div>
+    <div className="jodit-custom">
       {label && <label htmlFor={name}>{label}</label>}
       <JoditEditor
-        ref={editorRef} // ✅ Fixed
+        ref={editorRef}
         value={editorValue}
         config={config}
-        onBlur={(newContent) => handleEditorChange(newContent)}
-     
-          onChange={(newContent) => handleEditorChange(newContent)} 
+        // Only update on blur to avoid cursor jumping
+        onBlur={(content) => {
+          setEditorValue(content);
+          onChange(content);
+        }}
+        className="text-black"
       />
     </div>
   );
