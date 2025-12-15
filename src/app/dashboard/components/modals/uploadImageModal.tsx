@@ -16,11 +16,21 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
   const [images, setImages] = useState<File[]>([]);
   const [folder, setFolder] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiClient.post("photos/create-photo", formData);
+      const response = await apiClient.post("photos/create-photo", formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(percentCompleted);
+          }
+        },
+      });
       return response.data.data;
     },
     onSuccess: () => {
@@ -28,10 +38,12 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
       setFileNames([]);
       setImages([]);
       setFolder("");
+      setUploadProgress(0);
       onClose();
       toast.success("Images uploaded successfully!");
     },
     onError: (error) => {
+      setUploadProgress(0);
       toast.error("Failed to upload images");
       console.log(error);
     },
@@ -40,8 +52,36 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      setImages(selectedFiles);
-      setFileNames(selectedFiles.map((file) => file.name));
+      
+      // Limit to 10 images
+      if (selectedFiles.length > 10) {
+        Swal.fire({
+          icon: "warning",
+          title: "Too many files",
+          text: "You can upload maximum 10 images at once",
+          showConfirmButton: false,
+          timer: 2000,
+        });
+        return;
+      }
+      
+      // Validate file types
+      const validFiles = selectedFiles.filter(file => 
+        file.type.startsWith('image/')
+      );
+      
+      if (validFiles.length !== selectedFiles.length) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid files",
+          text: "Some files are not valid images",
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      }
+      
+      setImages(validFiles);
+      setFileNames(validFiles.map((file) => file.name));
     } else {
       setImages([]);
       setFileNames([]);
@@ -54,41 +94,45 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
     if (images.length === 0 || !folder) {
       Swal.fire({
         icon: "warning",
-        text: "Please complete the form",
+        text: "Please select images and a folder",
         showConfirmButton: false,
         timer: 1500,
-        showClass: {
-          popup: `
-            animate__animated
-            animate__fadeInUp
-            animate__faster
-          `,
-        },
-        hideClass: {
-          popup: `
-            animate__animated
-            animate__fadeOutDown
-            animate__faster
-          `,
-        },
       });
       return;
     }
 
     const formData = new FormData();
-    images.forEach((image) => formData.append("file", image));
+    
+    // Append each file individually (Multer expects 'file' field for each file)
+    images.forEach((image) => {
+      formData.append("file", image); // This works because Multer handles array
+    });
+    
+    // Append folder data
     formData.append("data", JSON.stringify({ folder }));
 
     uploadMutation.mutate(formData);
   };
 
+  // Remove a single image
+  const removeImage = (index: number) => {
+    const newImages = [...images];
+    const newFileNames = [...fileNames];
+    
+    newImages.splice(index, 1);
+    newFileNames.splice(index, 1);
+    
+    setImages(newImages);
+    setFileNames(newFileNames);
+  };
+
   return isOpen ? (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50">
-      <div className="bg-white shadow-2xl w-8/12 max-w-lg p-8 relative animate-fade-in-up">
+      <div className="bg-white shadow-2xl w-11/12 max-w-2xl p-8 relative animate-fade-in-up max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none z-10"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -112,24 +156,21 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
           {/* File Upload Section */}
           <div
             onClick={() => document.getElementById("file-input")?.click()}
-            className="flex items-center flex-col justify-center p-5 border-2 border-dashed bg-white cursor-pointer"
+            className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
           >
             <Image
-              alt="photo"
+              alt="upload"
               src="/Images/uploadImageLogo.jpg"
-              height={600}
-              width={800}
-              className="w-[120px] h-[120px]"
+              height={100}
+              width={100}
+              className="w-[80px] h-[80px] mb-4"
             />
-            {fileNames.length > 0 ? (
-              <div className="bg-slate-300 px-2 py-1 mt-2 text-sm space-y-1 max-h-24 overflow-y-auto w-full text-center">
-                {fileNames.map((name, i) => (
-                  <p key={i}>{name}</p>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-gray-500 text-sm">Click to select image(s)</p>
-            )}
+            <p className="text-gray-600 text-center mb-2">
+              Click to select images
+            </p>
+            <p className="text-gray-500 text-sm text-center">
+              You can select up to 10 images at once
+            </p>
           </div>
 
           <input
@@ -141,16 +182,58 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
             onChange={handleFileChange}
           />
 
+          {/* Selected Files Preview */}
+          {fileNames.length > 0 && (
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-medium text-gray-700 mb-2">
+                Selected Images ({fileNames.length}/10)
+              </h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {fileNames.map((name, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                    <span className="text-sm text-gray-600 truncate">{name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="text-red-500 hover:text-red-700 ml-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Upload Progress */}
+          {uploadMutation.isPending && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Uploading...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
           {/* Folder Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Folder
+              Select Folder *
             </label>
             <select
               required
               value={folder}
               onChange={(e) => setFolder(e.target.value)}
-              className="block w-full px-4 py-2 border border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={uploadMutation.isPending}
             >
               <option value="" disabled>
                 Select a folder
@@ -168,31 +251,27 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end space-x-4 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
+              disabled={uploadMutation.isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={uploadMutation.isPending || images.length === 0 || !folder}
             >
               {uploadMutation.isPending ? (
                 <div className="flex items-center gap-2">
-                  <Image
-                    alt="loading"
-                    src="/Images/loading.gif"
-                    height={20}
-                    width={20}
-                    className="w-[20px] h-[20px]"
-                  />
-                  <p>Uploading...</p>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Uploading ({uploadProgress}%)</span>
                 </div>
               ) : (
-                <p>Upload</p>
+                <span>Upload {images.length} Image{images.length !== 1 ? 's' : ''}</span>
               )}
             </button>
           </div>
