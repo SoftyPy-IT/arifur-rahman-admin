@@ -40,9 +40,12 @@ export type TPhoto = {
 };
 
 export type TVideo = {
-  _id?: string;
+  _id: string;
   folder: string;
-  videoUrl: string;
+  videoUrl: string; 
+  title: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TEvent = {
