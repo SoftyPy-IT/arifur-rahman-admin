@@ -35,7 +35,7 @@ const createMutation = useMutation({
     
     try {
       // Use fetch instead of apiClient to debug
-      const response = await fetch('http://localhost:5010/api/v1/videos', {
+      const response = await fetch('https://server.majumdararif.info/api/v1/videos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
