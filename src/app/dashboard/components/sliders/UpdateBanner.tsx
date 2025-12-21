@@ -104,34 +104,61 @@ const UpdateBannerSlider: React.FC<UpdateBannerSliderProps> = ({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Validate required fields
+  if (!formData.thumbnailImage) {
+    toast.error("Please select or enter a banner image");
+    return;
+  }
+  
+  if (!formData.title.trim()) {
+    toast.error("Main title is required");
+    return;
+  }
+  
+  setLoading(true);
+  
+  try {
+    // ✅ OPTIMISTIC UPDATE: Show changes immediately
+    queryClient.setQueryData(['banners'], (oldBanners: Banner[] = []) => {
+      return oldBanners.map(b => 
+        b._id === banner._id ? { ...b, ...formData } : b
+      );
+    });
     
-    setLoading(true);
-    try {
-      // Optimistic update
-      queryClient.setQueryData(['banners'], (old: Banner[] = []) => {
-        return old.map(b => 
-          b._id === banner._id ? { ...b, ...formData } : b
-        );
-      });
-      
-      await apiClient.patch(`/banners/${banner._id}`, formData);
-      toast.success("Banner updated successfully");
-      setOpenModalForUpdate(false);
-      
-      // Call onSuccess callback
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error: any) {
-      // On error, refetch from server
-      queryClient.invalidateQueries({ queryKey: ["banners"] });
-      toast.error(error.response?.data?.message || "Failed to update banner");
-    } finally {
-      setLoading(false);
+    // Send API request
+    await apiClient.patch(`/banners/${banner._id}`, formData);
+    
+    toast.success("Banner updated successfully ✅");
+    
+    // ✅ Call onSuccess to ensure fresh data
+    if (onSuccess) {
+      onSuccess();
     }
-  };
+    
+    // ✅ Small delay before closing
+    setTimeout(() => {
+      setOpenModalForUpdate(false);
+    }, 400);
+    
+  } catch (error: any) {
+    console.error("Update banner error:", error);
+    
+    // ✅ Rollback on error
+    queryClient.invalidateQueries({ queryKey: ["banners"] });
+    
+    // Show error message
+    const errorMsg = error.response?.data?.message || 
+                     error.response?.data?.error || 
+                     "Failed to update banner";
+    toast.error(errorMsg);
+    
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="h-full min-h-screen text-black">
@@ -204,22 +231,7 @@ const UpdateBannerSlider: React.FC<UpdateBannerSliderProps> = ({
                   </div>
                 )}
                 
-                {/* Direct URL input as backup */}
-                <div className="w-full max-w-2xl mt-4">
-                  <label className="block text-gray-700 mb-2 font-medium">
-                    Or enter image URL:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.thumbnailImage}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, thumbnailImage: e.target.value }));
-                      setImageUrl(e.target.value);
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://example.com/banner-image.jpg"
-                  />
-                </div>
+               
               </div>
             </div>
 

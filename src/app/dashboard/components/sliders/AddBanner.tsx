@@ -89,33 +89,59 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  // Validate required fields
+  if (!formData.thumbnailImage) {
+    toast.error("Please select or enter a banner image");
+    return;
+  }
+  
+  if (!formData.title.trim()) {
+    toast.error("Main title is required");
+    return;
+  }
+  
+  setLoading(true);
+  
+  try {
+    // Send API request
+    const response = await apiClient.post("/banners", formData);
+    const newBanner = response.data.data;
     
-    setLoading(true);
-    try {
-      const response = await apiClient.post("/banners", formData);
-      const newBanner = response.data.data;
-      
-      // Optimistically update cache
-      queryClient.setQueryData(['banners'], (old: Banner[] = []) => {
-        return [newBanner, ...old];
-      });
-      
-      toast.success("Banner added successfully");
-      setOpenModalForAdd(false);
-      
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error: any) {
-      // On error, refetch from server
-      queryClient.invalidateQueries({ queryKey: ["banners"] });
-      toast.error(error.response?.data?.message || "Failed to add banner");
-    } finally {
-      setLoading(false);
+    // ✅ CRITICAL FIX: Update cache IMMEDIATELY
+    queryClient.setQueryData(['banners'], (oldBanners: Banner[] = []) => {
+      return [newBanner, ...oldBanners];
+    });
+    
+    toast.success("Banner added successfully ✅");
+    
+    // ✅ Call onSuccess FIRST (triggers query invalidation)
+    if (onSuccess) {
+      onSuccess();
     }
-  };
+    
+    // ✅ Small delay for UI feedback before closing
+    setTimeout(() => {
+      setOpenModalForAdd(false);
+    }, 400);
+    
+  } catch (error: any) {
+    console.error("Add banner error:", error);
+    
+    // ✅ Rollback cache on error
+    queryClient.invalidateQueries({ queryKey: ["banners"] });
+    
+    // Show error message
+    const errorMsg = error.response?.data?.message || 
+                     error.response?.data?.error || 
+                     "Failed to add banner";
+    toast.error(errorMsg);
+    
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="h-full min-h-screen text-black">
@@ -188,22 +214,7 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
                   </div>
                 )}
                 
-                {/* Direct URL input as backup */}
-                <div className="w-full max-w-2xl mt-4">
-                  <label className="block text-gray-700 mb-2 font-medium">
-                    Or enter image URL:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.thumbnailImage}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, thumbnailImage: e.target.value }));
-                      setImageUrl(e.target.value);
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://example.com/banner-image.jpg"
-                  />
-                </div>
+             
               </div>
             </div>
 
