@@ -1,17 +1,25 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
-
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { 
-  Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Paper, IconButton,
-  Switch, Button, Dialog, DialogActions,
-  DialogContent, DialogTitle, TextField,
-} from "@mui/material";
-import { Edit, Delete, Add, Close } from "@mui/icons-material";
-import toast from "react-hot-toast";
-import axios from "axios";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+'use client'
+import Image from 'next/image';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import { BiSolidEditAlt } from 'react-icons/bi';
+import { useState } from 'react';
+import { FaArrowAltCircleDown, FaArrowAltCircleRight } from 'react-icons/fa';
+import { MdAddBox, MdDelete } from 'react-icons/md';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import useAxiosPublic from '@/axios/useAxiosPublic';
+import Swal from 'sweetalert2';
+import apiClient from '@/axios/axiosInstant';
+import toast from 'react-hot-toast';
+import { Switch } from '@mui/material';
+import AddBanner from '../components/sliders/AddBanner';
+import UpdateBanner from '../components/sliders/UpdateBanner';
 
 interface Banner {
   _id: string;
@@ -24,512 +32,254 @@ interface Banner {
   updatedAt: string;
 }
 
-export default function BannerList() {
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openAddDialog, setOpenAddDialog] = useState(false);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
-  const [formData, setFormData] = useState({
-    thumbnailImage: "",
-    toptitle: "",
-    title: "",
-    bottomtitle: "",
+const BannerPage = () => {
+  const queryClient = useQueryClient();
+  const axiosPublic = useAxiosPublic();
+  const [openModalForAdd, setOpenModalForAdd] = useState<boolean>(false);
+  const [openModalForUpdate, setOpenModalForUpdate] = useState<boolean>(false);
+  const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
+
+  // Fetch all banners with caching
+  const { data: banners = [], isLoading } = useQuery({
+    queryKey: ["banners"],
+    queryFn: async () => {
+      const response = await axiosPublic.get(`/banners`);
+      return response.data.data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState("");
 
-  useEffect(() => {
-    fetchBanners();
-  }, []);
-
- const fetchBanners = async () => {
-  try {
-    setLoading(true);
-    const response = await axios.get('/api/banners');
-    // If the API returns { data: banners }
-    setBanners(response.data.data || response.data || []);
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || "Failed to fetch banners");
-    console.error(error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        setFormData(prev => ({ ...prev, thumbnailImage: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const resetForm = () => {
-    setFormData({
-      thumbnailImage: "",
-      toptitle: "",
-      title: "",
-      bottomtitle: "",
-    });
-    setImageFile(null);
-    setImagePreview("");
-  };
-
-  const handleAddSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.thumbnailImage || !formData.toptitle || !formData.title || !formData.bottomtitle) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-    
-    try {
-      let thumbnailImageUrl = formData.thumbnailImage;
+  // Delete banner with optimistic updates
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.delete(`/banners/${id}`);
+      return response.data.data;
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['banners'] });
+      const previousBanners = queryClient.getQueryData<Banner[]>(['banners']);
       
-      // If image file is selected, upload it
-      if (imageFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('image', imageFile);
-        
-        const uploadResponse = await axios.post('/api/upload', uploadFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        
-        thumbnailImageUrl = uploadResponse.data.url;
+      if (previousBanners) {
+        queryClient.setQueryData<Banner[]>(['banners'], 
+          previousBanners.filter(banner => banner._id !== id)
+        );
       }
       
-      await axios.post('/api/banners', {
-        ...formData,
-        thumbnailImage: thumbnailImageUrl
+      return { previousBanners };
+    },
+    onError: (err, id, context) => {
+      if (context?.previousBanners) {
+        queryClient.setQueryData(['banners'], context.previousBanners);
+      }
+      toast.error("Failed to delete banner");
+    },
+    onSuccess: () => {
+      toast.success("Banner deleted successfully");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['banners'] });
+    },
+  });
+
+  // Toggle banner status with optimistic updates
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const response = await apiClient.patch(`/banners/${id}`, { isActive });
+      return response.data.data;
+    },
+    onMutate: async ({ id, isActive }) => {
+      await queryClient.cancelQueries({ queryKey: ['banners'] });
+      const previousBanners = queryClient.getQueryData<Banner[]>(['banners']);
+      
+      if (previousBanners) {
+        queryClient.setQueryData<Banner[]>(['banners'], 
+          previousBanners.map(banner => 
+            banner._id === id ? { ...banner, isActive } : banner
+          )
+        );
+      }
+      
+      return { previousBanners };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousBanners) {
+        queryClient.setQueryData(['banners'], context.previousBanners);
+      }
+      toast.error("Failed to update status");
+    },
+    onSuccess: () => {
+      // Success is handled in the function
+    },
+  });
+
+  const handleStatusToggle = async (banner: Banner) => {
+    const newStatus = !banner.isActive;
+    
+    try {
+      await statusMutation.mutateAsync({ 
+        id: banner._id, 
+        isActive: newStatus 
       });
       
-      toast.success("Banner added successfully");
-      setOpenAddDialog(false);
-      resetForm();
-      fetchBanners();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to add banner");
-      console.error(error);
+      toast.success(`Banner ${newStatus ? 'activated' : 'deactivated'} successfully`);
+    } catch (error) {
+      // Error handled in mutation
     }
+  };
+
+  const handleDelete = (id: string) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "This banner will be deleted permanently!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteMutation.mutate(id);
+      }
+    });
   };
 
   const handleEdit = (banner: Banner) => {
-    setEditingBanner(banner);
-    setFormData({
-      thumbnailImage: banner.thumbnailImage,
-      toptitle: banner.toptitle,
-      title: banner.title,
-      bottomtitle: banner.bottomtitle,
-    });
-    setImagePreview(banner.thumbnailImage);
-    setOpenEditDialog(true);
+    setSelectedBanner(banner);
+    setOpenModalForUpdate(true);
   };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingBanner) return;
-    
-    // Validate required fields
-    if (!formData.thumbnailImage || !formData.toptitle || !formData.title || !formData.bottomtitle) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-
-    try {
-      let thumbnailImageUrl = formData.thumbnailImage;
-      
-      // If new image file is selected, upload it
-      if (imageFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('image', imageFile);
-        
-        const uploadResponse = await axios.post('/api/upload', uploadFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        
-        thumbnailImageUrl = uploadResponse.data.url;
-      }
-      
-      await axios.patch(`/api/banners/${editingBanner._id}`, {
-        ...formData,
-        thumbnailImage: thumbnailImageUrl
-      });
-      
-      toast.success("Banner updated successfully");
-      setOpenEditDialog(false);
-      resetForm();
-      fetchBanners();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update banner");
-      console.error(error);
-    }
-  };
-
-  const handleStatusToggle = async (id: string, currentStatus: boolean) => {
-    try {
-      await axios.patch(`/api/banners/${id}`, { isActive: !currentStatus });
-      toast.success("Status updated successfully");
-      fetchBanners();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update status");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this banner?")) return;
-    
-    try {
-      await axios.delete(`/api/banners/${id}`);
-      toast.success("Banner deleted successfully");
-      fetchBanners();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete banner");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Banner Management</h1>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setOpenAddDialog(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          Add New Banner
-        </Button>
+    <div className='bg-white'>
+      {/* Sliders */}
+      <div className='relative'>
+        {/* Add Banner Slider */}
+        <div className={`transition-transform duration-500 w-full lg:w-4/5 shadow-lg h-full z-10 overflow-y-auto fixed ${openModalForAdd ? 'translate-y-0 top-0 bg-gray-100' : 'translate-y-[100%]'} flex justify-center`}>
+          <div className='w-full'>
+            <AddBanner 
+              setOpenModalForAdd={setOpenModalForAdd}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ["banners"] });
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Update Banner Slider */}
+        <div className={`transition-transform duration-500 w-full lg:w-4/5 shadow-lg h-full z-10 overflow-y-auto fixed ${openModalForUpdate ? 'translate-x-0 top-0 bg-gray-100' : 'translate-x-[100%]'} flex justify-center`}>
+          <div className='w-full'>
+            {selectedBanner && (
+              <UpdateBanner
+                banner={selectedBanner} 
+                setOpenModalForUpdate={setOpenModalForUpdate}
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["banners"] });
+                }}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead className="bg-gray-100">
-            <TableRow>
-              <TableCell>Image</TableCell>
-              <TableCell>Top Title</TableCell>
-              <TableCell>Main Title</TableCell>
-              <TableCell>Bottom Title</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {banners.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  No banners found. Add your first banner!
-                </TableCell>
-              </TableRow>
-            ) : (
-              banners.map((banner) => (
-                <TableRow key={banner._id}>
-                  <TableCell>
-                    <div className="relative w-24 h-16">
-                      <Image
-                        src={banner.thumbnailImage}
-                        alt={banner.title}
-                        fill
-                        className="object-cover rounded"
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell>{banner.toptitle}</TableCell>
-                  <TableCell>{banner.title}</TableCell>
-                  <TableCell>
-                    <div className="max-w-xs">{banner.bottomtitle}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={banner.isActive}
-                      onChange={() => handleStatusToggle(banner._id, banner.isActive)}
-                      color="success"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEdit(banner)}
-                        className="text-blue-600"
-                      >
-                        <Edit fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(banner._id)}
-                        className="text-red-600"
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Add Banner Dialog */}
-      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle className="flex justify-between items-center">
-          <span>Add New Banner</span>
-          <IconButton onClick={() => setOpenAddDialog(false)} size="small">
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <form onSubmit={handleAddSubmit}>
-          <DialogContent>
-            <div className="space-y-4 py-4">
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Banner Image *
-                </label>
-                {imagePreview ? (
-                  <div className="relative w-full h-48 mb-4">
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      fill
-                      className="object-cover rounded-lg"
-                    />
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        setImagePreview("");
-                        setImageFile(null);
-                        setFormData(prev => ({ ...prev, thumbnailImage: "" }));
-                      }}
-                      className="absolute top-2 right-2 bg-white"
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                      id="add-image-upload"
-                    />
-                    <label htmlFor="add-image-upload" className="cursor-pointer">
-                      <div className="text-4xl text-gray-400 mb-2">📷</div>
-                      <p className="text-gray-600">Click to upload banner image</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        PNG, JPG, WEBP up to 5MB
-                      </p>
-                    </label>
-                  </div>
-                )}
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-2">Or enter image URL:</p>
-                  <TextField
-                    fullWidth
-                    name="thumbnailImage"
-                    value={formData.thumbnailImage}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/banner-image.jpg"
-                    disabled={!!imagePreview}
-                  />
-                </div>
-              </div>
-
-              <TextField
-                fullWidth
-                label="Top Title *"
-                name="toptitle"
-                value={formData.toptitle}
-                onChange={handleInputChange}
-                placeholder="Enter top title (small text above main title)"
-                required
-              />
-
-              <TextField
-                fullWidth
-                label="Main Title *"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                placeholder="Enter main title"
-                required
-              />
-
-              <TextField
-                fullWidth
-                label="Bottom Title/Description *"
-                name="bottomtitle"
-                value={formData.bottomtitle}
-                onChange={handleInputChange}
-                placeholder="Enter description or bottom title"
-                multiline
-                rows={3}
-                required
-              />
-            </div>
-          </DialogContent>
-          <DialogActions className="p-4">
-            <Button onClick={() => setOpenAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              className="bg-blue-600 hover:bg-blue-700"
+      {isLoading ? (
+        <div className='w-full flex justify-center mt-28'>
+          <Image alt='loading' src="/Images/loading.gif" height={600} width={800} className='w-[80px] h-[80px]' />
+        </div>
+      ) : (
+        <div>
+          {/* Header section */}
+          <div className='my-5 flex md:flex-row justify-between items-center gap-3 mx-8'>
+            <h1 className='lg:text-4xl text-xl font-semibold text-orange-500'>
+              Banner Management
+            </h1>
+            <button 
+              onClick={() => setOpenModalForAdd(!openModalForAdd)} 
+              className='active:scale-95 text-xl text-white p-2 bg-blue-600 hover:bg-blue-800 flex gap-1 items-center pl-3 pr-5 rounded'
             >
-              Add Banner
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+              <MdAddBox /> Add New Banner
+            </button>
+          </div>
 
-      {/* Edit Banner Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle className="flex justify-between items-center">
-          <span>Edit Banner</span>
-          <IconButton onClick={() => setOpenEditDialog(false)} size="small">
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <form onSubmit={handleUpdate}>
-          <DialogContent>
-            <div className="space-y-4 py-4">
-              {/* Image Upload for Edit */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Banner Image *
-                </label>
-                {imagePreview ? (
-                  <div className="relative w-full h-48 mb-4">
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      fill
-                      className="object-cover rounded-lg"
-                    />
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        setImagePreview("");
-                        setImageFile(null);
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          thumbnailImage: editingBanner?.thumbnailImage || "" 
-                        }));
-                      }}
-                      className="absolute top-2 right-2 bg-white"
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="relative w-full h-48 mb-4">
-                    <Image
-                      src={editingBanner?.thumbnailImage || ""}
-                      alt="Current"
-                      fill
-                      className="object-cover rounded-lg"
-                    />
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*';
-                        input.onchange = (e: any) => handleImageChange(e);
-                        input.click();
-                      }}
-                      className="absolute top-2 right-2 bg-white"
-                    >
-                      Change
-                    </Button>
-                  </div>
-                )}
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-2">Or enter image URL:</p>
-                  <TextField
-                    fullWidth
-                    name="thumbnailImage"
-                    value={formData.thumbnailImage}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/banner-image.jpg"
-                    disabled={!!imagePreview}
-                  />
-                </div>
-              </div>
-
-              <TextField
-                fullWidth
-                label="Top Title *"
-                name="toptitle"
-                value={formData.toptitle}
-                onChange={handleInputChange}
-                required
-              />
-
-              <TextField
-                fullWidth
-                label="Main Title *"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                required
-              />
-
-              <TextField
-                fullWidth
-                label="Bottom Title/Description *"
-                name="bottomtitle"
-                value={formData.bottomtitle}
-                onChange={handleInputChange}
-                multiline
-                rows={3}
-                required
-              />
-            </div>
-          </DialogContent>
-          <DialogActions className="p-4">
-            <Button onClick={() => setOpenEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Update Banner
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+          {/* Table section */}
+          <section className='mx-8 mb-20'>
+            <TableContainer component={Paper} sx={{ maxWidth: '100%', marginTop: '20px' }}>
+              <Table sx={{ width: '100%', border: "2px solid #e5e7eb" }} aria-label="banner table">
+                <TableHead className='bg-blue-50'>
+                  <TableRow>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Image</TableCell>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Top Title</TableCell>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Main Title</TableCell>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Bottom Title</TableCell>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Status</TableCell>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Last Updated</TableCell>
+                    <TableCell align='left' className='text-gray-900 font-semibold'>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {banners.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className='text-center py-8'>
+                        No banners found. Add your first banner!
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    banners.map((banner: Banner) => (
+                      <TableRow 
+                        key={banner._id}
+                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                      >
+                        <TableCell component="th" scope="row">
+                          <div className='relative w-20 h-12'>
+                            <Image 
+                              alt='banner' 
+                              src={banner.thumbnailImage || "/placeholder-image.jpg"} 
+                              fill
+                              className='object-cover rounded'
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell align="left">{banner.toptitle || "-"}</TableCell>
+                        <TableCell align="left">{banner.title || "-"}</TableCell>
+                        <TableCell align="left">
+                          <div className='max-w-xs truncate'>{banner.bottomtitle || "-"}</div>
+                        </TableCell>
+                        <TableCell align="left">
+                          <Switch
+                            checked={banner.isActive}
+                            onChange={() => handleStatusToggle(banner)}
+                            color="success"
+                          />
+                        </TableCell>
+                        <TableCell align="left">
+                          {new Date(banner.updatedAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell align="left">
+                          <div className='flex items-center gap-3'>
+                            <button 
+                              onClick={() => handleEdit(banner)}
+                              className='active:scale-95 text-xl text-white p-2 bg-orange-500 flex gap-1 items-center rounded-full hover:bg-orange-800'
+                            >
+                              <BiSolidEditAlt />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(banner._id)}
+                              className='bg-rose-600 p-2 text-xl rounded-full text-white active:scale-90 hover:bg-red-800'
+                            >
+                              <MdDelete />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </section>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default BannerPage;

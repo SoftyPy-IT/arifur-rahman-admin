@@ -1,19 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Drawer } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import { CiEdit } from "react-icons/ci";
 import apiClient from "@/axios/axiosInstant";
-import UploadImageSlider from "./uploadImageSlider/UploadImageSlider"; // Add this import
-
-interface AddBannerSliderProps {
-  setOpenModalForAdd: (value: boolean) => void;
-  onSuccess?: () => void;
-}
+import UploadImageSlider from "./uploadImageSlider/UploadImageSlider"; 
 
 interface Banner {
   _id: string;
@@ -26,12 +21,19 @@ interface Banner {
   updatedAt: string;
 }
 
-const AddBannerSlider: React.FC<AddBannerSliderProps> = ({ 
-  setOpenModalForAdd,
+interface UpdateBannerSliderProps {
+  banner: Banner;
+  setOpenModalForUpdate: (value: boolean) => void;
+  onSuccess?: () => void;
+}
+
+const UpdateBannerSlider: React.FC<UpdateBannerSliderProps> = ({ 
+  banner, 
+  setOpenModalForUpdate,
   onSuccess 
 }) => {
   const queryClient = useQueryClient();
-  const [openImageDrawer, setOpenImageDrawer] = useState(false); // Change variable name for clarity
+  const [openImageDrawer, setOpenImageDrawer] = useState(false); // Change variable name
   const [imageUrl, setImageUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,6 +43,20 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
     bottomtitle: "",
     isActive: true,
   });
+
+  // Initialize form with banner data
+  useEffect(() => {
+    if (banner) {
+      setFormData({
+        thumbnailImage: banner.thumbnailImage || "",
+        title: banner.title || "",
+        toptitle: banner.toptitle || "",
+        bottomtitle: banner.bottomtitle || "",
+        isActive: banner.isActive !== undefined ? banner.isActive : true,
+      });
+      setImageUrl(banner.thumbnailImage || "");
+    }
+  }, [banner]);
 
   const toggleImageDrawer = (newOpen: boolean) => setOpenImageDrawer(newOpen);
 
@@ -93,25 +109,25 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
     
     setLoading(true);
     try {
-      const response = await apiClient.post("/banners", formData);
-      const newBanner = response.data.data;
-      
-      // Optimistically update cache
+      // Optimistic update
       queryClient.setQueryData(['banners'], (old: Banner[] = []) => {
-        return [newBanner, ...old];
+        return old.map(b => 
+          b._id === banner._id ? { ...b, ...formData } : b
+        );
       });
       
-      toast.success("Banner added successfully");
-      setOpenModalForAdd(false);
+      await apiClient.patch(`/banners/${banner._id}`, formData);
+      toast.success("Banner updated successfully");
+      setOpenModalForUpdate(false);
       
-      // Call onSuccess callback if provided
+      // Call onSuccess callback
       if (onSuccess) {
         onSuccess();
       }
     } catch (error: any) {
       // On error, refetch from server
       queryClient.invalidateQueries({ queryKey: ["banners"] });
-      toast.error(error.response?.data?.message || "Failed to add banner");
+      toast.error(error.response?.data?.message || "Failed to update banner");
     } finally {
       setLoading(false);
     }
@@ -122,14 +138,14 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
       {/* Fixed header with back button */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <button 
-          onClick={() => setOpenModalForAdd(false)} 
+          onClick={() => setOpenModalForUpdate(false)} 
           className="text-rose-600 px-3 py-1 border border-rose-600 flex flex-row active:scale-95 gap-2 items-center justify-center bg-white"
         >
           <span className="text-xl"><CiEdit /></span>
           <p>Back</p>
         </button>
         <h2 className="text-xl font-bold text-gray-800">
-          Add New Banner
+          Update Banner
         </h2>
         <div className="w-24"></div> {/* Spacer for alignment */}
       </div>
@@ -277,7 +293,7 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
               <div className="max-w-4xl mx-auto flex justify-end space-x-4">
                 <button
                   type="button"
-                  onClick={() => setOpenModalForAdd(false)}
+                  onClick={() => setOpenModalForUpdate(false)}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   disabled={loading}
                 >
@@ -291,10 +307,10 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Adding...
+                      Updating...
                     </>
                   ) : (
-                    "Add Banner"
+                    "Update Banner"
                   )}
                 </button>
               </div>
@@ -306,4 +322,4 @@ const AddBannerSlider: React.FC<AddBannerSliderProps> = ({
   );
 };
 
-export default AddBannerSlider;
+export default UpdateBannerSlider;

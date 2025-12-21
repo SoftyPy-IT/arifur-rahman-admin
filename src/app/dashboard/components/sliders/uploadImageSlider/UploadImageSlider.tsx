@@ -51,7 +51,7 @@ const UploadImageSlider = ({
   const { data, totalCount } = photosData;
 
   return (
-    <div className="bg-white w-[300px] md:w-[600px] lg:w-[800px] xl:w-[1000px]">
+    <div className="bg-white w-[300px] md:w-[600px] lg:w-[800px] xl:w-[1000px] z-50">
       {/* Pagination and control buttons */}
       <div className="bg-white border-t-2 shadow-xl gap-3 bottom-0 fixed px-8 py-2 z-20 w-[300px] md:w-[600px] lg:w-[800px] xl:w-[1000px] flex flex-col md:flex-row justify-between items-center">
         {totalCount < limit && currentPage === 1 ? (
