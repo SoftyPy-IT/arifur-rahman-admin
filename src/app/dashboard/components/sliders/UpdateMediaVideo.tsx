@@ -79,13 +79,13 @@ const UpdateMediaVideo: React.FC<UpdateVideoProps> = ({ videoId, setOpenModalFor
   }
 
   return (
-    <div className="h-full min-h-[500px] text-black bg-white/90 p-6 rounded-lg">
+    <div className=" min-h-[500px] lg:w-[600px] text-black bg-white/90 p-6 rounded-lg">
       <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">
         Update Video
       </h2>
 
       <form onSubmit={handleSubmit}>
-        <div className="max-w-4xl 2xl:mt-10 px-6 pt-4 flex flex-col gap-8 justify-between items-center pb-12">
+        <div className="max-w-6xl 2xl:mt-10 px-6 pt-4 flex flex-col gap-8 justify-between items-center pb-12">
           <section className="flex flex-col lg:flex-row gap-12 w-full">
             {/* Left side: Form fields */}
             <div className="flex flex-col gap-6 w-full">

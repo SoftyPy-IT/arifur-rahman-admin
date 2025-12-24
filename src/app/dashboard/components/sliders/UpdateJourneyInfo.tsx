@@ -74,7 +74,7 @@ const UpdateJourneyInfo: React.FC<UpdateJourneyInfoProps> = ({
   return (
     <div className="h-full min-h-[500px] text-black">
       <form onSubmit={handleSubmit}>
-        <div className="max-w-4xl 2xl:mt-28 px-6 pt-10 flex flex-col gap-10 justify-between items-center pb-20">
+        <div className="max-w-4xl 2xl:mt-28 px-6 pt-10 flex flex-col gap-10 justify-between items-center pb-20 text-black">
           <section className="flex flex-col lg:flex-row gap-16">
             {/* Left Panel: Title, Short Description */}
             <div className="flex flex-col gap-[20px]">

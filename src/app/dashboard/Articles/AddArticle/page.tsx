@@ -107,7 +107,7 @@ const AddNewArticle = () => {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="w-full 2xl:mt-28 px-6 pt-10 flex flex-col  gap-10 justify-between items-center pb-20">
+        <div className="w-full 2xl:mt-28 px-6 pt-10 flex flex-col  gap-10 justify-between items-center pb-20 text-black">
           {/* input field  */}
           <div className="flex flex-col lg:flex-row  gap-[20px] w-full">
             {/* image  */}

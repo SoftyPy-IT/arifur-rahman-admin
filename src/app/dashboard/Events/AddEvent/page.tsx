@@ -113,7 +113,7 @@ const AddNewEvent = () => {
 
       <div className="w-full flex justify-center items-center">
         <form onSubmit={handleSubmit}>
-          <div className="max-w-4xl 2xl:mt-28 px-6 pt-10 flex flex-col  gap-10 justify-between items-center pb-20">
+          <div className="max-w-4xl 2xl:mt-28 px-6 pt-10 flex flex-col  gap-10 justify-between items-center pb-20 text-black">
             {/* input field  */}
             <section className="flex flex-col justify-between lg:flex-row gap-16 w-full h-auto lg:h-[220px]">
               {/* image,  */}

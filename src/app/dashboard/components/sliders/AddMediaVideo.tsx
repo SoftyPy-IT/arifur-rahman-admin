@@ -97,7 +97,7 @@ const createMutation = useMutation({
   };
 
   return (
-    <div className='h-full min-h-[500px] bg-white/90 p-6 rounded-lg'>
+    <div className=' min-h-[500px] lg:w-[600px] bg-white/90 p-6 rounded-lg'>
       <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">
         Add New Video
       </h2>

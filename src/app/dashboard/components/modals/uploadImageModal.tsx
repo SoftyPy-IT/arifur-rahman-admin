@@ -127,7 +127,7 @@ const UploadImageModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
   };
 
   return isOpen ? (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50 text-black">
       <div className="bg-white shadow-2xl w-11/12 max-w-2xl p-8 relative animate-fade-in-up max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button

@@ -40,7 +40,7 @@ const UserManagement = () => {
   const [openModalForUpdate, setOpenModalForUpdate] = useState<boolean>(false);
   return (
     // user
-    <div className="bg-white">
+    <div className="bg-white text-black">
       <div className="relative ">
         {/* slider for add info  */}
         <div
