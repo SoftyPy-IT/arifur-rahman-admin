@@ -174,3 +174,35 @@ export type TFeatures = {
   contact: TContact;
   createdAt: string;
 };
+
+
+export type TPlan = {
+  _id: string;
+  imageUrl: string;
+  title: string;
+  location: string;
+  shortDescription: string;
+  description: string;
+  date: string;
+  createdAt: string;
+};
+
+export type TManifesto = {
+  _id: string;
+  title: string;
+  subtitle?: string;
+  shortDescription?: string;
+  description: string;
+  imageUrl: string;
+  pdfLinks?: { name: string; url: string }[]; 
+  keyPoints?: string[];
+  date?: string | Date;
+};
+
+export type TPhotoCard = {
+  _id: string;
+  imageUrl: string;
+  title: string;
+  date: string;
+  createdAt: string;
+};

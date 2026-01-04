@@ -5,12 +5,12 @@ import { usePathname } from 'next/navigation';
 import React, { ReactNode} from 'react';
 import { BiRevision, BiSelection } from 'react-icons/bi';
 import { CiLogout } from 'react-icons/ci';
-import { FaBoxTissue, FaImage, FaIndustry, FaUserEdit, FaUserLock, FaVideo } from 'react-icons/fa';
+import { FaBoxTissue, FaImage, FaIndustry, FaUserEdit, FaUserLock, FaVideo, FaVoteYea } from 'react-icons/fa';
 import { GrGallery } from 'react-icons/gr';
 
-import { MdContacts, MdDashboard, MdOutlineEventAvailable, MdPermIdentity, MdPermMedia, MdRealEstateAgent, MdSettings } from 'react-icons/md';
+import { MdContacts, MdDashboard, MdOutlineEventAvailable, MdOutlinePhoto, MdPermIdentity, MdPermMedia, MdRealEstateAgent, MdSettings } from 'react-icons/md';
 import { PiFlagBannerFill } from 'react-icons/pi';
-import { RiArticleFill } from 'react-icons/ri';
+import { RiArticleFill, RiCalendarTodoFill } from 'react-icons/ri';
 import { SiHeroku, SiRemovedotbg } from 'react-icons/si';
 import { TbFileLike } from 'react-icons/tb';
 import Accordion from '@mui/material/Accordion';
@@ -142,6 +142,11 @@ const routes:Nav[] = [
     path:'/dashboard/Banner',
     icon:<PiFlagBannerFill />
   },
+   {
+    navItem: "Election Manifesto",
+    path: "/dashboard/Manifesto",
+    icon: <FaVoteYea />,
+  },
   {
     navItem:'Our Concern Issues',
     path:'/dashboard/OurConcernIssues',
@@ -195,6 +200,16 @@ const routes:Nav[] = [
     navItem:'Events',
     path:'/dashboard/Events',
     icon:<MdOutlineEventAvailable />
+  },
+   {
+    navItem: "Plans",
+    path: "/dashboard/Plans",
+    icon: <RiCalendarTodoFill />,
+  },
+  {
+    navItem: "Photo Cards",
+    path: "/dashboard/PhotoCard",
+    icon: <MdOutlinePhoto />,
   },
   {
     navItem:'Gallery',
