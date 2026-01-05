@@ -1,145 +1,153 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/components/sliders/UpdateMediaVideo.tsx
 "use client";
-import React from 'react';
-import useAxiosPublic from '@/axios/useAxiosPublic';
-import apiClient from '@/axios/axiosInstant';
-import toast from 'react-hot-toast';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TVideo } from '@/types/types';
-import { TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+
+import React, { useEffect, useState } from "react";
+import useAxiosPublic from "@/axios/useAxiosPublic";
+import apiClient from "@/axios/axiosInstant";
+import toast from "react-hot-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { TVideo } from "@/types/types";
+import { TextField } from "@mui/material";
 
 interface UpdateVideoProps {
   videoId: string;
   setOpenModalForUpdate: (value: boolean) => void;
 }
 
-const UpdateMediaVideo: React.FC<UpdateVideoProps> = ({ videoId, setOpenModalForUpdate }) => {
+const UpdateMediaVideo: React.FC<UpdateVideoProps> = ({
+  videoId,
+  setOpenModalForUpdate,
+}) => {
   const queryClient = useQueryClient();
   const axiosPublic = useAxiosPublic();
 
-  // Video folders
-  const videoFolders = [
-    'Banner',
-    'Who We Are',
-    'Events',
-    'Training',
-    'Interviews',
-    'Campaign',
-    'Other'
-  ];
+  const [formData, setFormData] = useState<Partial<TVideo>>({
+    videoUrl: "",
+    title: "",
+    date: "",
+  });
 
-  // Getting video data
+  // 🔹 Fetch single video
   const { data: video, isLoading } = useQuery({
     queryKey: ["video", videoId],
-    queryFn: async () => {
-      if (!videoId) return null;
-      const response = await axiosPublic.get(`/videos/${videoId}`);
-      return response.data.data;
-    },
     enabled: !!videoId,
+    queryFn: async () => {
+      const res = await axiosPublic.get(`/videos/${videoId}`);
+      return res.data.data;
+    },
   });
 
+  // 🔹 Populate form after fetch
+  useEffect(() => {
+    if (video) {
+      setFormData({
+        videoUrl: video.videoUrl || "",
+        title: video.title || "",
+        date: video.date || "",
+      });
+    }
+  }, [video]);
+
+  // 🔹 Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<TVideo> }) => {
-      const response = await apiClient.put(`/videos/${id}`, data);
-      return response.data.data;
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<TVideo>;
+    }) => {
+      const res = await apiClient.put(`/videos/${id}`, data);
+      return res.data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-      toast.success('Video updated successfully');
-      setOpenModalForUpdate(false);
+      queryClient.invalidateQueries({ queryKey: ["videos"] });
+      toast.success("Video updated successfully");
+      setOpenModalForUpdate(false); // ✅ auto close slider
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update video');
-      console.error('Update error:', error);
+      toast.error(error.response?.data?.message || "Failed to update video");
     },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // 🔹 Input change handler
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // 🔹 Submit handler
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
 
-    const data: Partial<TVideo> = {
-      // folder: formData.get('folder') as string,
-      videoUrl: formData.get('videoUrl') as string,
-      title: formData.get('title') as string,
-    };
+    if (!formData.date) {
+      toast.error("Date is required");
+      return;
+    }
 
-    updateMutation.mutate({ id: videoId, data });
+    updateMutation.mutate({
+      id: videoId,
+      data: formData,
+    });
   };
 
   if (isLoading) {
     return (
-      <div className="h-full min-h-[500px] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="animate-spin h-10 w-10 rounded-full border-t-2 border-b-2 border-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className=" min-h-[500px] lg:w-[600px] text-black bg-white/90 p-6 rounded-lg">
-      <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">
+    <div className="min-h-[500px] lg:w-[600px] bg-white/90 p-6 rounded-lg text-black">
+      <h2 className="text-2xl font-bold text-center mb-8">
         Update Video
       </h2>
 
-      <form onSubmit={handleSubmit}>
-        <div className="max-w-6xl 2xl:mt-10 px-6 pt-4 flex flex-col gap-8 justify-between items-center pb-12">
-          <section className="flex flex-col lg:flex-row gap-12 w-full">
-            {/* Left side: Form fields */}
-            <div className="flex flex-col gap-6 w-full">
-              {/* Folder */}
-              <FormControl fullWidth>
-                <InputLabel>Folder</InputLabel>
-                <Select
-                  name="folder"
-                  defaultValue={video?.folder || 'Banner'}
-                  label="Folder"
-                  required
-                >
-                  {videoFolders.map((folder) => (
-                    <MenuItem key={folder} value={folder}>
-                      {folder}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Video URL */}
-              <TextField
-                required
-                name="videoUrl"
-                defaultValue={video?.videoUrl || ''}
-                label="Video URL"
-                variant="outlined"
-                fullWidth
-                helperText="Enter YouTube or Facebook video URL"
-              />
-
-              {/* Title */}
-              <TextField
-                required
-                name="title"
-                defaultValue={video?.title || ''}
-                label="Video Title"
-                variant="outlined"
-                fullWidth
-                placeholder="Enter video title"
-              />
-            </div>
-
-            
-          </section>
-
-          <button
-            type="submit"
-            disabled={updateMutation.isPending}
-            className="w-full max-w-md bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {updateMutation.isPending ? 'Updating...' : 'Update Video'}
-          </button>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Date */}
+        <div>
+          <p className="mb-2">Select Published Date</p>
+          <input
+            type="date"
+            name="date"
+            required
+            value={formData.date}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+          />
         </div>
+
+        {/* Video URL */}
+        <TextField
+          name="videoUrl"
+          label="Video URL"
+          value={formData.videoUrl}
+          onChange={handleChange}
+          fullWidth
+          required
+        />
+
+        {/* Title */}
+        <TextField
+          name="title"
+          label="Video Title"
+          value={formData.title}
+          onChange={handleChange}
+          fullWidth
+          required
+        />
+
+        <button
+          type="submit"
+          disabled={updateMutation.isPending}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded active:scale-95 disabled:opacity-50"
+        >
+          {updateMutation.isPending ? "Updating..." : "Update Video"}
+        </button>
       </form>
     </div>
   );
