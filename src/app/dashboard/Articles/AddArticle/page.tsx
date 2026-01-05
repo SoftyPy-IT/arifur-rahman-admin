@@ -151,7 +151,7 @@ const AddNewArticle = () => {
                 id="outlined-basic"
                 label="Title"
                 variant="outlined"
-              />
+              /> 
 
               <label htmlFor="date">
                 <p className="text-gray-950 mb-2">Select published Date</p>

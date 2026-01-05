@@ -30,6 +30,9 @@ import UpdateMediaVideo from "../components/sliders/UpdateMediaVideo";
 import ReactPlayer from "react-player";
 import { videoFolder } from "@/utils/folderOption";
 
+
+
+
 const Videos = () => {
   const [updateVideoId, setUpdateVideoId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,7 +123,8 @@ const Videos = () => {
               </span>{" "}
               <p>Back</p>
             </button>
-            <AddMediaVideo />
+            
+            <AddMediaVideo onSuccessClose={() => setOpenModalForAdd(false)} />
           </div>
         </div>
 

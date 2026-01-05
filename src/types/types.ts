@@ -41,9 +41,9 @@ export type TPhoto = {
 
 export type TVideo = {
   _id: string;
-  folder: string;
   videoUrl: string; 
   title: string;
+  date:string; 
   createdAt: string;
   updatedAt: string;
 };
