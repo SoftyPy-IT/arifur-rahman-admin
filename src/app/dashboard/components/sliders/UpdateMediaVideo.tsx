@@ -62,7 +62,7 @@ const UpdateMediaVideo: React.FC<UpdateVideoProps> = ({ videoId, setOpenModalFor
     const formData = new FormData(form);
 
     const data: Partial<TVideo> = {
-      folder: formData.get('folder') as string,
+      // folder: formData.get('folder') as string,
       videoUrl: formData.get('videoUrl') as string,
       title: formData.get('title') as string,
     };
