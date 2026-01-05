@@ -46,7 +46,9 @@ const UpdatePhotoCard: React.FC<UpdatePhotoCardProps> = ({
           setPhotoCard(data);
           setImageUrl(data.imageUrl);
           setTitle(data.title);
-          setDate(data.date ? new Date(data.date).toISOString().split("T")[0] : "");
+          setDate(
+            data.date ? new Date(data.date).toISOString().split("T")[0] : ""
+          );
         }
       } catch (error) {
         console.error("Error fetching photo card data:", error);
@@ -78,7 +80,10 @@ const UpdatePhotoCard: React.FC<UpdatePhotoCardProps> = ({
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<TPhotoCard>) => {
-      const response = await apiClient.patch(`/photoCards/${photoCardId}`, data);
+      const response = await apiClient.patch(
+        `/photoCards/${photoCardId}`,
+        data
+      );
       return response.data;
     },
     onSuccess: (data) => {
@@ -87,19 +92,21 @@ const UpdatePhotoCard: React.FC<UpdatePhotoCardProps> = ({
       setOpenModalForUpdate(false);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to update photo card");
+      toast.error(
+        error.response?.data?.message || "Failed to update photo card"
+      );
       console.error("Update error:", error);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim()) {
       toast.error("Title is required");
       return;
     }
-    
+
     if (!date) {
       toast.error("Date is required");
       return;
@@ -128,8 +135,12 @@ const UpdatePhotoCard: React.FC<UpdatePhotoCardProps> = ({
   if (!photoCard) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Photo Card Not Found</h2>
-        <p className="text-gray-600">The photo card you are trying to edit does not exist.</p>
+        <h2 className="text-2xl font-bold text-red-600 mb-4">
+          Photo Card Not Found
+        </h2>
+        <p className="text-gray-600">
+          The photo card you are trying to edit does not exist.
+        </p>
       </div>
     );
   }
@@ -181,9 +192,15 @@ const UpdatePhotoCard: React.FC<UpdatePhotoCardProps> = ({
 
               <div className="flex flex-col gap-1">
                 <label htmlFor="title">Title</label>
-                <input
+                {/* <input
                   defaultValue={photoCard?.title}
                   name="title"
+                  className="md:w-[350px] px-5 py-3 border outline-blue-400 w-[250px] bg-white"
+                  type="text"
+                /> */}
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   className="md:w-[350px] px-5 py-3 border outline-blue-400 w-[250px] bg-white"
                   type="text"
                 />
@@ -192,15 +209,23 @@ const UpdatePhotoCard: React.FC<UpdatePhotoCardProps> = ({
               <label htmlFor="Date">
                 <p className="text-gray-950 mb-1">Select Date</p>
                 <input
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  type="date"
+                  className="md:w-[350px] w-[250px] bg-white py-3 text-gray-700 px-3"
+                />
+
+                {/* <input
                   name="date"
                   defaultValue={
-                    photoCard?.date && !isNaN(new Date(photoCard?.date).getTime())
+                    photoCard?.date &&
+                    !isNaN(new Date(photoCard?.date).getTime())
                       ? new Date(photoCard?.date).toISOString().split("T")[0]
                       : ""
                   }
                   type="date"
                   className="md:w-[350px] w-[250px] bg-white py-3 text-gray-700 px-3"
-                />
+                /> */}
               </label>
             </div>
           </section>

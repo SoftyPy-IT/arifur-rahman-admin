@@ -85,7 +85,7 @@ const PhotoCard = () => {
               </span>{" "}
               <p>Back</p>
             </button>
-            <AddNewPhotoCard setOpenModalForAdd={setOpenModalForAdd}/>
+            <AddNewPhotoCard setOpenModalForAdd={setOpenModalForAdd} />
           </div>
         </div>
         {/* slider for update  info  */}
